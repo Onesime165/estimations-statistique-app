@@ -7,10 +7,58 @@ from scipy import stats
 from scipy.stats import shapiro, kstest, norm, t, chi2, probplot
 import plotly.express as px
 from statsmodels.stats.proportion import proportion_confint
-# from scipy.stats import binom # Remplacé par statsmodels qui est plus complet
 
 # Configuration de la page
 st.set_page_config(layout="wide", page_title="📊 Analyse Statistique")
+
+# --- Styles CSS personnalisés ---
+st.markdown("""
+<style>
+    .main {
+        background-color: #f9f9f9;
+        color: #333;
+    }
+    h1, h2, h3 {
+        color: #2c3e50;
+        font-family: "Segoe UI", sans-serif;
+    }
+    .sidebar .sidebar-content {
+        background-color: #f0f4f8;
+        border-radius: 10px;
+        padding: 20px;
+    }
+    .css-1offfwp.e1h7wlp61 {
+        color: #2980b9;
+    }
+    .stButton button {
+        background-color: #2980b9;
+        color: white;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+    .stMetric {
+        background-color: #ecf0f1;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .author-info {
+        background-color: #ffffff;
+        border-left: 4px solid #2980b9;
+        padding: 15px;
+        margin-top: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .author-info h4 {
+        color: #2980b9;
+        margin-bottom: 10px;
+    }
+    .author-info p {
+        margin: 5px 0;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # --- Widget déplacé en dehors de la fonction mise en cache ---
 uploaded_file = st.sidebar.file_uploader(
@@ -51,26 +99,21 @@ def bootstrap_ci(data, func, n_resamples=1000, conf_level=0.95):
          if len(estimates) < 2 : return (np.nan, np.nan) # Pas assez de données valides pour l'intervalle
     else :
         estimates = np.apply_along_axis(func, 1, resamples)
-
     alpha = 1 - conf_level
     # Gérer le cas où il n'y a pas assez d'estimations valides
     if len(estimates) == 0:
         return (np.nan, np.nan)
     return np.percentile(estimates, [100*alpha/2, 100*(1-alpha/2)])
 
-
 # --- Flux d'exécution principal ---
-
 # Charger les données uniquement si un fichier est téléversé
 if uploaded_file is not None:
     df = load_data(uploaded_file) # df est maintenant le dataframe chargé
-
     # Continuer seulement si le chargement des données a réussi
     if df is not None:
         st.sidebar.write(f"🔍 {len(df)} observations, {len(df.columns)} variables")
-
         # Onglets principaux
-        tab1, tab2 = st.tabs(["Variables Quantitatives", "Variables Qualitatives"])
+        tab1, tab2, tab3 = st.tabs(["Variables Quantitatives", "Variables Qualitatives", "À propos"])
 
         with tab1:
             # Partie Variables Quantitatives
@@ -82,20 +125,16 @@ if uploaded_file is not None:
                 st.warning("Aucune variable quantitative trouvée dans les données.")
             else:
                 selected_quant_col = st.selectbox("Sélectionnez la variable quantitative", numeric_cols, key="quant_var_select")
-
                 # --- Header dynamique ---
                 st.header(f"Analyse de la Variable Quantitative : `{selected_quant_col}`")
-
                 # Nettoyage des données pour la variable sélectionnée
                 # Utiliser .copy() pour éviter SettingWithCopyWarning si on modifie clean_quant_data plus tard
                 clean_quant_data = df[selected_quant_col].dropna().copy()
-
                 if len(clean_quant_data) > 0:
                     # Affichage des statistiques descriptives
                     # --- Sous-titre dynamique ---
                     st.subheader(f"Statistiques descriptives pour `{selected_quant_col}`")
                     col1_desc, col2_desc = st.columns(2) # Noms de colonnes uniques
-
                     with col1_desc:
                         stats_dict = {
                             "Moyenne": clean_quant_data.mean(),
@@ -108,7 +147,6 @@ if uploaded_file is not None:
                         }
                         stats_df = pd.DataFrame.from_dict(stats_dict, orient='index', columns=['Valeur'])
                         st.dataframe(stats_df.style.format("{:.4f}"))
-
                     with col2_desc:
                         fig_box, ax_box = plt.subplots() # Noms de fig/ax uniques
                         sns.boxplot(x=clean_quant_data, ax=ax_box, color='skyblue')
@@ -116,13 +154,11 @@ if uploaded_file is not None:
                         ax_box.set_xlabel(selected_quant_col)
                         ax_box.set_title(f'Box Plot de `{selected_quant_col}`') # Titre dynamique
                         st.pyplot(fig_box)
-
                     # Test de normalité
                     # --- Sous-titre dynamique ---
                     st.subheader(f"Test de normalité pour `{selected_quant_col}`")
                     test_type = st.radio("Type de test", ["Shapiro-Wilk", "Kolmogorov-Smirnov"],
                                          key=f"norm_test_type_{selected_quant_col}", horizontal=True) # Clé unique par variable
-
                     # Effectuer le test seulement si assez de données (>3 pour Shapiro)
                     p_value = np.nan # Initialiser
                     stat = np.nan
@@ -135,7 +171,6 @@ if uploaded_file is not None:
                         stat, p_value = kstest(clean_quant_data, 'norm',
                                                args=(clean_quant_data.mean(), clean_quant_data.std(ddof=1))) # Utiliser std échantillon
                         normality_test_done = True
-
                     if normality_test_done:
                         st.write(f"**Test:** {test_type}")
                         st.write(f"**Statistique:** {stat:.4f}")
@@ -148,8 +183,6 @@ if uploaded_file is not None:
                         st.write(f"**Conclusion (seuil {alpha_norm*100}%)**: {conclusion}")
                     else:
                         st.warning(f"Le test de normalité '{test_type}' n'a pas pu être effectué (pas assez de données valides).")
-
-
                     # Graphiques de distribution
                     # --- Titres dynamiques ---
                     col1_dist, col2_dist = st.columns(2)
@@ -165,7 +198,6 @@ if uploaded_file is not None:
                             ax_hist.legend()
                         ax_hist.set_title(f"Distribution de `{selected_quant_col}`")
                         st.pyplot(fig_hist)
-
                     with col2_dist:
                         fig_qq, ax_qq = plt.subplots()
                         # Vérifier qu'il y a assez de données pour probplot
@@ -176,26 +208,21 @@ if uploaded_file is not None:
                             ax_qq.text(0.5, 0.5, "Pas assez de données pour le Q-Q plot", ha='center', va='center')
                             ax_qq.set_title(f"Q-Q Plot pour `{selected_quant_col}`")
                         st.pyplot(fig_qq)
-
                     # Estimation statistique
                     # --- Sous-titre dynamique ---
                     st.subheader(f"Estimation par Intervalle de Confiance pour `{selected_quant_col}`")
-
                     # Décision méthode basée sur p-value valide
                     use_parametric = normality_test_done and p_value > alpha_norm
-
                     if use_parametric:
                         st.success(f"Méthode paramétrique (basée sur la loi de Student car `{selected_quant_col}` semble suivre une loi normale).")
                         n = len(clean_quant_data)
                         mean_val = clean_quant_data.mean()
                         std_err = stats.sem(clean_quant_data, nan_policy='omit') # Erreur standard de la moyenne
-
                         # IC Moyenne (Student)
                         if n > 1 and pd.notna(mean_val) and pd.notna(std_err) and std_err >= 0:
                              mean_ci = t.interval(0.95, df=n-1, loc=mean_val, scale=std_err)
                         else:
                              mean_ci = (np.nan, np.nan)
-
                         # IC Variance (Chi2)
                         var_val = clean_quant_data.var(ddof=1)
                         if n > 1 and pd.notna(var_val):
@@ -209,22 +236,18 @@ if uploaded_file is not None:
                         else:
                             var_ci = (np.nan, np.nan)
                             sd_ci = (np.nan, np.nan)
-
                     else:
                         if not normality_test_done:
                             st.warning(f"Méthode non-paramétrique (Bootstrap) utilisée car le test de normalité n'a pas pu être effectué.")
                         else:
                             st.warning(f"Méthode non-paramétrique (Bootstrap) utilisée car `{selected_quant_col}` ne semble pas suivre une loi normale (p <= {alpha_norm}).")
-
                         n_resamples = st.slider("Nombre de réplications bootstrap", 100, 10000, 1000,
                                                 key=f"n_resamples_{selected_quant_col}") # Clé unique
-
                         # Calcul des IC Bootstrap
                         mean_ci = bootstrap_ci(clean_quant_data, np.mean, n_resamples)
                         # Utiliser ddof=1 pour la variance/std d'échantillon dans bootstrap
                         var_ci = bootstrap_ci(clean_quant_data, np.var, n_resamples)
                         sd_ci = bootstrap_ci(clean_quant_data, np.std, n_resamples)
-
                         # Visualisation bootstrap (Exemple Écart-type)
                         # --- Titre dynamique ---
                         # Recalculer les échantillons bootstrap pour l'écart-type pour le graphique
@@ -233,7 +256,6 @@ if uploaded_file is not None:
                                                                            size=len(clean_quant_data),
                                                                            replace=True), ddof=1)
                                                    for _ in range(n_resamples)]
-
                             fig_boot, ax_boot = plt.subplots()
                             sns.histplot(bootstrap_samples_sd, kde=True, ax=ax_boot, color='lightcoral')
                             # Ajouter lignes pour IC si valide
@@ -245,13 +267,10 @@ if uploaded_file is not None:
                             st.pyplot(fig_boot)
                         else:
                             st.info("Graphique Bootstrap non disponible (moins de 2 données valides).")
-
-
                     # Affichage des résultats d'estimation
                     st.markdown("---") # Séparateur visuel
                     st.write("**Estimations Ponctuelles et Intervalles de Confiance (95%)**")
                     col1_est, col2_est, col3_est = st.columns(3)
-
                     with col1_est:
                         st.metric(
                             "Moyenne",
@@ -260,7 +279,6 @@ if uploaded_file is not None:
                             delta=f"IC: [{mean_ci[0]:.4f}, {mean_ci[1]:.4f}]" if pd.notna(mean_ci[0]) else "IC: N/A",
                             delta_color="off" # Pas de couleur pour l'IC
                         )
-
                     with col2_est:
                         st.metric(
                             "Variance (Éch.)",
@@ -268,7 +286,6 @@ if uploaded_file is not None:
                             delta=f"IC: [{var_ci[0]:.4f}, {var_ci[1]:.4f}]" if pd.notna(var_ci[0]) else "IC: N/A",
                              delta_color="off"
                         )
-
                     with col3_est:
                         st.metric(
                             "Écart-type (Éch.)",
@@ -279,7 +296,6 @@ if uploaded_file is not None:
                 else:
                     # S'affiche si la colonne sélectionnée n'a que des NA
                     st.warning(f"Aucune donnée valide (non-NA) trouvée pour la variable `{selected_quant_col}`.")
-
         with tab2:
             # Partie Variables Qualitatives
             # Sélection de la variable qualitative
@@ -288,7 +304,6 @@ if uploaded_file is not None:
                                 if df[col].nunique() < 15 and df[col].nunique() > 1]
             # Ajouter les numériques faible cardinalité à la liste si pas déjà présents
             qual_cols += [col for col in low_card_numeric if col not in qual_cols]
-
             if not qual_cols:
                  # Ce header s'affiche seulement s'il n'y a pas de var. qualitatives
                 st.header("Analyse des Variables Qualitatives")
@@ -296,15 +311,12 @@ if uploaded_file is not None:
             else:
                 selected_qual_col = st.selectbox("Sélectionnez la variable qualitative", qual_cols,
                                                  key="qual_var_select")
-
                 # --- Header dynamique ---
                 st.header(f"Analyse de la Variable Qualitative : `{selected_qual_col}`")
-
                 if selected_qual_col in df.columns:
                     # Traiter comme chaîne pour l'analyse des modalités, en gardant les NA pour le compte total initial
                     current_qual_data_with_na = df[selected_qual_col]
                     current_qual_data = current_qual_data_with_na.dropna().astype(str) # Convertir en str après dropna
-
                     # Sélection de la modalité
                     modalities = sorted(current_qual_data.unique())
                     if not modalities:
@@ -312,32 +324,24 @@ if uploaded_file is not None:
                     else:
                         selected_modality = st.selectbox(f"Sélectionnez la modalité de `{selected_qual_col}` à analyser",
                                                         modalities, key=f"modality_select_{selected_qual_col}") # Clé unique
-
                         # --- Sous-titre dynamique ---
                         st.subheader(f"Analyse de la Proportion pour la modalité `{selected_modality}` (Variable `{selected_qual_col}`)")
-
-
                         # Paramètres d'analyse
                         conf_level_percent = st.slider("Niveau de confiance (%)", 90, 99, 95,
                                                 key=f"conf_level_slider_{selected_qual_col}") # Clé unique
                         conf_level = conf_level_percent / 100.0
-
                         method_options = ['normal', 'agresti_coull', 'beta', 'wilson', 'jeffreys']
                         default_method_index = method_options.index('wilson')
                         method = st.selectbox("Méthode d'intervalle de confiance (proportion)",
                                                 method_options, index=default_method_index,
                                                 key=f"ci_method_prop_{selected_qual_col}", # Clé unique
                                                 help="Méthodes de `statsmodels.stats.proportion.proportion_confint`. 'wilson' est souvent un bon choix.")
-
-
                         # Calcul des proportions basé sur les données NON-NA
                         total_count = len(current_qual_data) # Total des observations non-NA pour cette variable
                         modality_count = (current_qual_data == selected_modality).sum()
-
                         if total_count > 0:
                             proportion_val = modality_count / total_count
                             proportion_percent = proportion_val * 100
-
                             # Intervalle de confiance
                             try:
                                 low, upp = proportion_confint(modality_count, total_count,
@@ -346,10 +350,8 @@ if uploaded_file is not None:
                             except Exception as e:
                                 st.error(f"Erreur calcul IC: {e}")
                                 low_percent, upp_percent = np.nan, np.nan
-
                             # Affichage des résultats
                             col1_qual, col2_qual = st.columns([1, 2]) # Donner plus de place au graphique
-
                             with col1_qual:
                                  # --- Texte de la métrique dynamique ---
                                 st.metric(
@@ -363,7 +365,6 @@ if uploaded_file is not None:
                                     st.write(f"[{low_percent:.2f}%, {upp_percent:.2f}%]")
                                 else:
                                      st.write(f"**Intervalle de confiance à {conf_level_percent:.0f}% ({method}):** Calcul impossible.")
-
                                 # Téléchargement des résultats (nom de fichier dynamique)
                                 results = pd.DataFrame({
                                     'Variable': [selected_qual_col],
@@ -375,7 +376,6 @@ if uploaded_file is not None:
                                     f'Borne Inférieure IC ({conf_level_percent:.0f}%)': [low_percent],
                                     f'Borne Supérieure IC ({conf_level_percent:.0f}%)': [upp_percent]
                                 })
-
                                 csv = results.to_csv(index=False).encode('utf-8')
                                 st.download_button(
                                     label=f"Télécharger résultats pour '{selected_modality}'",
@@ -384,7 +384,6 @@ if uploaded_file is not None:
                                     mime='text/csv',
                                     key=f"download_prop_{selected_qual_col}_{selected_modality}" # Clé unique
                                 )
-
                             with col2_qual:
                                 # Graphique en camembert pour toutes les modalités de la variable sélectionnée
                                 # --- Titre dynamique ---
@@ -406,22 +405,33 @@ if uploaded_file is not None:
                                     st.plotly_chart(fig_pie, use_container_width=True)
                                 else:
                                      st.warning(f"Pas de données à afficher dans le graphique pour `{selected_qual_col}`.")
-
                         else:
                             st.warning(f"Aucune donnée non nulle trouvée pour la variable `{selected_qual_col}` pour calculer les proportions.")
-
                         # Affichage des données brutes (optionnel, label dynamique)
                         if st.checkbox(f"Afficher les données brutes (non-NA) pour `{selected_qual_col}`", key=f"show_raw_data_{selected_qual_col}"): # Clé unique
                              st.dataframe(df[[selected_qual_col]].dropna())
-
                 else:
                      # Ne devrait pas arriver si la sélection est basée sur df.columns
                     st.error(f"Erreur interne: La variable `{selected_qual_col}` n'a pas été trouvée.")
 
+        with tab3:
+            st.header("🧾 À Propos")
+            st.markdown("""
+<div class="author-info">
+    <h4>🧾 About the Author</h4>
+    <p><strong>Name:</strong> N'dri</p>
+    <p><strong>First Name:</strong> Abo Onesime</p>
+    <p><strong>Role:</strong> Data Analyst / Scientist</p>
+    <p><strong>Phone:</strong> 07-68-05-98-87 / 01-01-75-11-81</p>
+    <p><strong>Email:</strong> <a href="mailto:ndriablatie123@gmail.com">ndriablatie123@gmail.com</a></p>
+    <p><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/abo-onesime-n-dri-54a537200/"  target="_blank">LinkedIn Profile</a></p>
+    <p><strong>GitHub:</strong> <a href="https://github.com/Aboonesime"  target="_blank">My GitHub</a></p>
+</div>
+            """, unsafe_allow_html=True)
+
     # Message si le chargement a échoué après une tentative de téléversement
     elif uploaded_file is not None and df is None:
         st.error("Le chargement des données a échoué. Vérifiez le format ou le contenu du fichier.")
-
 # Message si aucun fichier n'est encore téléversé
 else:
     st.info("👋 Bienvenue ! Veuillez télécharger un fichier de données (CSV ou Excel) via la barre latérale pour commencer l'analyse.")
