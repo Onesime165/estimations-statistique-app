@@ -137,7 +137,7 @@ plt.rcParams.update({
     'ytick.color': '#e0e6ed',
     'grid.color': '#4a5568',
     'text.color': '#e0e6ed',
-    'legend.facecolor': 'rgba(15,15,35,0.8)',
+    'legend.facecolor': '#0f0f23',  # Couleur hexadécimale au lieu de rgba
     'legend.edgecolor': '#00ffff'
 })
 
@@ -392,15 +392,18 @@ if df is not None:
                     all_proportions = current_qual_data.value_counts(normalize=True) * 100
                     
                     if not all_proportions.empty:
+                        # Créer une liste de couleurs dynamique basée sur la modalité sélectionnée
+                        colors = ['#00ffff' if name == selected_modality else '#4a5568' for name in all_proportions.index]
+                        
                         fig_pie = px.pie(values=all_proportions.values, names=all_proportions.index,
-                                        color_discrete_sequence=px.colors.sequential.Cyan, hole=.4)
+                                        color_discrete_sequence=colors, hole=.4)
                         
                         pull_list = [0.2 if name == selected_modality else 0 for name in all_proportions.index]
                         fig_pie.update_traces(textposition='inside', textinfo='percent+label', 
                                             sort=False, pull=pull_list)
                         fig_pie.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0), 
                                             template=plotly_dark_template)
-                        st.plotly_chart(fig_pie, use_container_width=True)
+                        st.plotly_chart(fig_pie, use_container_width=True, key=f"pie_chart_{selected_qual_col}_{selected_modality}")
 
 else:
     st.info("👋 Bienvenue ! Veuillez télécharger un fichier de données (CSV ou Excel) pour commencer l'analyse.")
