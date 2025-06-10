@@ -9,12 +9,7 @@ import plotly.express as px
 from statsmodels.stats.proportion import proportion_confint
 
 # Configuration de la page
-st.set_page_config(
-    page_title="ESTIMATION STATISTIQUE",
-    page_icon="🚀",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(layout="wide", page_title="📊 Analyse Statistique")
 
 # --- Styles CSS personnalisés ---
 st.markdown("""
