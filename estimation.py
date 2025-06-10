@@ -42,13 +42,13 @@ def bootstrap_ci(data, func, n_resamples=1000, conf_level=0.95):
         data = data.to_numpy()
     # Gérer le cas où les données sont vides ou ont moins de 2 éléments pour var/std
     if len(data) < 1 or (func in [np.var, np.std] and len(data) < 2) :
-         return (np.nan, np.nan)
+        return (np.nan, np.nan)
     resamples = np.random.choice(data, size=(n_resamples, len(data)), replace=True)
     # Appliquer la fonction en gérant les lignes avec moins de 2 éléments pour var/std si nécessaire
     if func in [np.var, np.std] :
-         estimates = np.array([func(resample, ddof=1) if len(resample) >= 2 else np.nan for resample in resamples])
-         estimates = estimates[~np.isnan(estimates)] # Exclure les NaN
-         if len(estimates) < 2 : return (np.nan, np.nan) # Pas assez de données valides pour l'intervalle
+        estimates = np.array([func(resample, ddof=1) if len(resample) >= 2 else np.nan for resample in resamples])
+        estimates = estimates[~np.isnan(estimates)] # Exclure les NaN
+        if len(estimates) < 2 : return (np.nan, np.nan) # Pas assez de données valides pour l'intervalle
     else :
         estimates = np.apply_along_axis(func, 1, resamples)
 
@@ -77,7 +77,7 @@ if uploaded_file is not None:
             # Sélection de la variable quantitative
             numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
             if not numeric_cols:
-                 # Ce header s'affiche seulement s'il n'y a pas de var. quantitatives
+                # Ce header s'affiche seulement s'il n'y a pas de var. quantitatives
                 st.header("Analyse des Variables Quantitatives")
                 st.warning("Aucune variable quantitative trouvée dans les données.")
             else:
@@ -121,7 +121,7 @@ if uploaded_file is not None:
                     # --- Sous-titre dynamique ---
                     st.subheader(f"Test de normalité pour `{selected_quant_col}`")
                     test_type = st.radio("Type de test", ["Shapiro-Wilk", "Kolmogorov-Smirnov"],
-                                         key=f"norm_test_type_{selected_quant_col}", horizontal=True) # Clé unique par variable
+                                        key=f"norm_test_type_{selected_quant_col}", horizontal=True) # Clé unique par variable
 
                     # Effectuer le test seulement si assez de données (>3 pour Shapiro)
                     p_value = np.nan # Initialiser
@@ -131,9 +131,9 @@ if uploaded_file is not None:
                         stat, p_value = shapiro(clean_quant_data)
                         normality_test_done = True
                     elif test_type == "Kolmogorov-Smirnov" and len(clean_quant_data) > 0:
-                         # K-S test contre une distribution normale avec moyenne/écart-type estimés
+                        # K-S test contre une distribution normale avec moyenne/écart-type estimés
                         stat, p_value = kstest(clean_quant_data, 'norm',
-                                               args=(clean_quant_data.mean(), clean_quant_data.std(ddof=1))) # Utiliser std échantillon
+                                                args=(clean_quant_data.mean(), clean_quant_data.std(ddof=1))) # Utiliser std échantillon
                         normality_test_done = True
 
                     if normality_test_done:
@@ -142,9 +142,9 @@ if uploaded_file is not None:
                         st.write(f"**P-value:** {p_value:.4f}")
                         alpha_norm = 0.05 # Seuil alpha
                         if p_value > alpha_norm:
-                             conclusion = f"✅ Ne pas rejeter H0. La distribution de `{selected_quant_col}` pourrait être normale (p > {alpha_norm})."
+                            conclusion = f"✅ Ne pas rejeter H0. La distribution de `{selected_quant_col}` pourrait être normale (p > {alpha_norm})."
                         else:
-                             conclusion = f"❌ Rejeter H0. La distribution de `{selected_quant_col}` n'est probablement pas normale (p <= {alpha_norm})."
+                            conclusion = f"❌ Rejeter H0. La distribution de `{selected_quant_col}` n'est probablement pas normale (p <= {alpha_norm})."
                         st.write(f"**Conclusion (seuil {alpha_norm*100}%)**: {conclusion}")
                     else:
                         st.warning(f"Le test de normalité '{test_type}' n'a pas pu être effectué (pas assez de données valides).")
@@ -192,9 +192,9 @@ if uploaded_file is not None:
 
                         # IC Moyenne (Student)
                         if n > 1 and pd.notna(mean_val) and pd.notna(std_err) and std_err >= 0:
-                             mean_ci = t.interval(0.95, df=n-1, loc=mean_val, scale=std_err)
+                            mean_ci = t.interval(0.95, df=n-1, loc=mean_val, scale=std_err)
                         else:
-                             mean_ci = (np.nan, np.nan)
+                            mean_ci = (np.nan, np.nan)
 
                         # IC Variance (Chi2)
                         var_val = clean_quant_data.var(ddof=1)
@@ -230,9 +230,9 @@ if uploaded_file is not None:
                         # Recalculer les échantillons bootstrap pour l'écart-type pour le graphique
                         if len(clean_quant_data) >= 2: # Nécessaire pour std
                             bootstrap_samples_sd = [np.std(np.random.choice(clean_quant_data.to_numpy(),
-                                                                           size=len(clean_quant_data),
-                                                                           replace=True), ddof=1)
-                                                   for _ in range(n_resamples)]
+                                                                            size=len(clean_quant_data),
+                                                                            replace=True), ddof=1)
+                                                    for _ in range(n_resamples)]
 
                             fig_boot, ax_boot = plt.subplots()
                             sns.histplot(bootstrap_samples_sd, kde=True, ax=ax_boot, color='lightcoral')
@@ -255,7 +255,7 @@ if uploaded_file is not None:
                     with col1_est:
                         st.metric(
                             "Moyenne",
-                             # Afficher la valeur même si l'IC est nan
+                            # Afficher la valeur même si l'IC est nan
                             value=f"{clean_quant_data.mean():.4f}" if pd.notna(clean_quant_data.mean()) else "N/A",
                             delta=f"IC: [{mean_ci[0]:.4f}, {mean_ci[1]:.4f}]" if pd.notna(mean_ci[0]) else "IC: N/A",
                             delta_color="off" # Pas de couleur pour l'IC
@@ -266,15 +266,15 @@ if uploaded_file is not None:
                             "Variance (Éch.)",
                             value=f"{clean_quant_data.var(ddof=1):.4f}" if pd.notna(clean_quant_data.var(ddof=1)) else "N/A",
                             delta=f"IC: [{var_ci[0]:.4f}, {var_ci[1]:.4f}]" if pd.notna(var_ci[0]) else "IC: N/A",
-                             delta_color="off"
+                            delta_color="off"
                         )
 
                     with col3_est:
                         st.metric(
                             "Écart-type (Éch.)",
-                             value=f"{clean_quant_data.std(ddof=1):.4f}" if pd.notna(clean_quant_data.std(ddof=1)) else "N/A",
+                            value=f"{clean_quant_data.std(ddof=1):.4f}" if pd.notna(clean_quant_data.std(ddof=1)) else "N/A",
                             delta=f"IC: [{sd_ci[0]:.4f}, {sd_ci[1]:.4f}]" if pd.notna(sd_ci[0]) else "IC: N/A",
-                             delta_color="off"
+                            delta_color="off"
                         )
                 else:
                     # S'affiche si la colonne sélectionnée n'a que des NA
@@ -290,12 +290,12 @@ if uploaded_file is not None:
             qual_cols += [col for col in low_card_numeric if col not in qual_cols]
 
             if not qual_cols:
-                 # Ce header s'affiche seulement s'il n'y a pas de var. qualitatives
+                # Ce header s'affiche seulement s'il n'y a pas de var. qualitatives
                 st.header("Analyse des Variables Qualitatives")
                 st.warning("Aucune variable qualitative (ou numérique à faible cardinalité) trouvée.")
             else:
                 selected_qual_col = st.selectbox("Sélectionnez la variable qualitative", qual_cols,
-                                                 key="qual_var_select")
+                                                    key="qual_var_select")
 
                 # --- Header dynamique ---
                 st.header(f"Analyse de la Variable Qualitative : `{selected_qual_col}`")
@@ -308,10 +308,10 @@ if uploaded_file is not None:
                     # Sélection de la modalité
                     modalities = sorted(current_qual_data.unique())
                     if not modalities:
-                         st.warning(f"Aucune modalité trouvée pour `{selected_qual_col}` après suppression des NA.")
+                        st.warning(f"Aucune modalité trouvée pour `{selected_qual_col}` après suppression des NA.")
                     else:
                         selected_modality = st.selectbox(f"Sélectionnez la modalité de `{selected_qual_col}` à analyser",
-                                                        modalities, key=f"modality_select_{selected_qual_col}") # Clé unique
+                                                            modalities, key=f"modality_select_{selected_qual_col}") # Clé unique
 
                         # --- Sous-titre dynamique ---
                         st.subheader(f"Analyse de la Proportion pour la modalité `{selected_modality}` (Variable `{selected_qual_col}`)")
@@ -319,7 +319,7 @@ if uploaded_file is not None:
 
                         # Paramètres d'analyse
                         conf_level_percent = st.slider("Niveau de confiance (%)", 90, 99, 95,
-                                                key=f"conf_level_slider_{selected_qual_col}") # Clé unique
+                                                    key=f"conf_level_slider_{selected_qual_col}") # Clé unique
                         conf_level = conf_level_percent / 100.0
 
                         method_options = ['normal', 'agresti_coull', 'beta', 'wilson', 'jeffreys']
@@ -341,7 +341,7 @@ if uploaded_file is not None:
                             # Intervalle de confiance
                             try:
                                 low, upp = proportion_confint(modality_count, total_count,
-                                                            alpha=1-conf_level, method=method)
+                                                                alpha=1-conf_level, method=method)
                                 low_percent, upp_percent = low*100, upp*100
                             except Exception as e:
                                 st.error(f"Erreur calcul IC: {e}")
@@ -351,7 +351,7 @@ if uploaded_file is not None:
                             col1_qual, col2_qual = st.columns([1, 2]) # Donner plus de place au graphique
 
                             with col1_qual:
-                                 # --- Texte de la métrique dynamique ---
+                                # --- Texte de la métrique dynamique ---
                                 st.metric(
                                     f"Proportion de '{selected_modality}'",
                                     value=f"{proportion_percent:.2f}%",
@@ -362,7 +362,7 @@ if uploaded_file is not None:
                                     st.write(f"**Intervalle de confiance à {conf_level_percent:.0f}% ({method}):**")
                                     st.write(f"[{low_percent:.2f}%, {upp_percent:.2f}%]")
                                 else:
-                                     st.write(f"**Intervalle de confiance à {conf_level_percent:.0f}% ({method}):** Calcul impossible.")
+                                    st.write(f"**Intervalle de confiance à {conf_level_percent:.0f}% ({method}):** Calcul impossible.")
 
                                 # Téléchargement des résultats (nom de fichier dynamique)
                                 results = pd.DataFrame({
@@ -405,17 +405,17 @@ if uploaded_file is not None:
                                     fig_pie.update_layout(showlegend=False) # Légende redondante avec labels
                                     st.plotly_chart(fig_pie, use_container_width=True)
                                 else:
-                                     st.warning(f"Pas de données à afficher dans le graphique pour `{selected_qual_col}`.")
+                                    st.warning(f"Pas de données à afficher dans le graphique pour `{selected_qual_col}`.")
 
                         else:
                             st.warning(f"Aucune donnée non nulle trouvée pour la variable `{selected_qual_col}` pour calculer les proportions.")
 
                         # Affichage des données brutes (optionnel, label dynamique)
                         if st.checkbox(f"Afficher les données brutes (non-NA) pour `{selected_qual_col}`", key=f"show_raw_data_{selected_qual_col}"): # Clé unique
-                             st.dataframe(df[[selected_qual_col]].dropna())
+                            st.dataframe(df[[selected_qual_col]].dropna())
 
                 else:
-                     # Ne devrait pas arriver si la sélection est basée sur df.columns
+                    # Ne devrait pas arriver si la sélection est basée sur df.columns
                     st.error(f"Erreur interne: La variable `{selected_qual_col}` n'a pas été trouvée.")
 
     # Message si le chargement a échoué après une tentative de téléversement
@@ -426,3 +426,17 @@ if uploaded_file is not None:
 else:
     st.info("👋 Bienvenue ! Veuillez télécharger un fichier de données (CSV ou Excel) via la barre latérale pour commencer l'analyse.")
     st.markdown("Cette application vous permet d'analyser des variables quantitatives (calcul de statistiques descriptives, tests de normalité, intervalles de confiance paramétriques ou bootstrap) et qualitatives (calcul de proportions avec intervalles de confiance).")
+    
+    st.markdown("""
+    <hr>
+    <div class="author-info">
+        <h4>🧾 About the Author</h4>
+        <p>Name: N'dri</p>
+        <p>First Name: Abo Onesime</p>
+        <p>Role: Data Analyst / Scientist</p>
+        <p>Phone: 07-68-05-98-87 / 01-01-75-11-81</p>
+        <p>Email: <a href="mailto:ndriablatie123@gmail.com">ndriablatie123@gmail.com</a></p>
+        <p>LinkedIn: <a href="https://www.linkedin.com/in/abo-onesime-n-dri-54a537200/" target="_blank">LinkedIn Profile</a></p>
+        <p>GitHub: <a href="https://github.com/Aboonesime" target="_blank">My GitHub</a></p>
+    </div>
+    """, unsafe_allow_html=True)
